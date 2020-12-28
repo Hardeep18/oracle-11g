@@ -1,0 +1,137 @@
+1.-Unzip the file using the command:
+unzip oracle-xe-11.2.0-1.0.x86_64.rpm.zip
+
+2.-Install the necessary packages with the command:
+sudo apt-get install alien libaio1 unixodbc
+
+3.-Convert the RPM format package to the DEB format (This format is used by Ubuntu) using the command:
+sudo alien --scripts -d oracle-xe-11.2.0-1.0.x86_64.rpm
+
+4.-Create the required chkconfig script using the command:
+sudo pico / sbin / chkconfig
+
+The pico text editor started and the commands were displayed on the screen. Now, we copy and paste the following into the file and save:
+
+#! / bin / bash
+# Oracle 11gR2 XE installer chkconfig hack for Ubuntu
+file = / etc / init.d / oracle-xe
+if [[! `tail -n1 $ file | grep INIT`]]; then
+echo >> $ file
+echo '### BEGIN INIT INFO' >> $ file
+echo '# Provides: OracleXE' >> $ file
+echo '# Required-Start: $ remote_fs $ syslog' >> $ file
+echo '# Required-Stop: $ remote_fs $ syslog' >> $ file
+echo '# Default-Start: 2 3 4 5' >> $ file
+echo '# Default-Stop: 0 1 6' >> $ file
+echo '# Short-Description: Oracle 11g Express Edition' >> $ file
+echo '### END INIT INFO' >> $ file
+fi
+update-rc.d oracle-xe defaults 80 01
+
+5.-We change the permissions of the chkconfig file using the command:
+sudo chmod 755 / sbin / chkconfig
+
+6.- We establish the kernel parameters. Oracle 11gR2 XE requires additional kernel parameters which we need using the command:
+sudo pico /etc/sysctl.d/60-oracle.conf
+
+We copy the following into the file and save:
+# Oracle 11g XE kernel parameters
+fs.file-max = 6815744
+net.ipv4.ip_local_port_range = 9000 65000
+kernel.sem = 250 32000 100 128
+kernel.shmmax = 536870912
+
+We verify the change using the command:
+sudo cat /etc/sysctl.d/60-oracle.conf
+
+We should see what we wrote earlier. Now we load the kernel parameters:
+sudo service procps start
+
+We verify that the parameters were loaded by:
+sudo sysctl -q fs.file-max
+
+We should be able to observe the maximum value of the file that we entered earlier.
+
+7.-We configure a / dev / shm mount point for Oracle. We create the following file using the command:
+sudo peak /etc/rc2.d/S01shm_load
+
+We copy the following into the file and save:
+
+#! / bin / sh
+case "$ 1" in
+start) mkdir / var / lock / subsys 2> / dev / null
+       touch / var / lock / subsys / listener
+       rm / dev / shm 2> / dev / null
+       mkdir / dev / shm 2> / dev / null
+       mount -t tmpfs shmfs -o size = 2048m / dev / shm ;;
+*) echo error
+   exit 1 ;;
+that C
+
+We change the file permissions using the command:
+sudo chmod 755 /etc/rc2.d/S01shm_load
+
+* WE RESTART OUR VIRTUAL MACHINE *
+
+--- NOW IF THE INSTALLATION OF THE MANAGEMENT SYSTEM ---
+
+
+1.-We install the oracle manager system using the command:
+sudo dpkg --install oracle-xe_11.2.0-2_amd64.deb
+
+2.-We configure Oracle using the command:
+sudo /etc/init.d/oracle-xe configure
+
+We introduce the following information:
+A valid HTTP port for the Oracle Application Express application (default is: 8080).
+A valid port for the Oracle database listener (default is: 1521).
+A password for the SYS and SYSTEM user account manager.
+Confirm passwords.
+Select if we want the manager system to start when the system starts.
+
+3.-We configure the environment variables by editing our .bashrc file:
+peak ~ / .bashrc
+
+We add the following lines to the end of the file:
+export ORACLE_HOME = / u01 / app / oracle / product / 11.2.0 / xe
+export ORACLE_SID = XE
+export NLS_LANG = `$ ORACLE_HOME / bin / nls_lang.sh`
+export ORACLE_BASE = / u01 / app / oracle
+export LD_LIBRARY_PATH = $ ORACLE_HOME / lib: $ LD_LIBRARY_PATH
+export PATH = $ ORACLE_HOME / bin: $ PATH
+
+We execute the changes by executing our profile:
+. ~ / .profile
+
+4.-We start Oracle 11gR2 XE:
+sudo service oracle-xe start
+
+5.-We add a user YOURUSERNAME to the dba group using the command:
+
+sudo usermod -a -G dba YOURUSERNAME
+
+--- USE OF ORACLE COMMAND SHELL ---
+
+1.-We start the Oracle XE 11gR2 server services using the command:
+sudo service oracle-xe start
+
+2.-We start the command line as the system administrator:
+sqlplus sys as sysdba
+
+We enter the password that we selected during the installation.
+
+3.-We create a regular user account using the SQL command:
+create user USERNAME identified by PASSWORD;
+
+We replace USERNAME and PASSWORD with the username and password that we have chosen. It is important to remember the username and password. If we had an error when executing the command, then we execute the following SQL command and retry:
+alter database open resetlogs
+
+4.-Assign privileges to the user account using the SQL command:
+grant connect, resource to USERNAME;
+We replace USERNAME and PASSWORD with the username and password that we have chosen. It is important to remember the username and password.
+
+5.-We exit with the following SQL command:
+exit;
+
+6.-We start the command line as a regular user using the command:
+sqlplus
